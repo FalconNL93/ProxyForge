@@ -1,0 +1,6 @@
+@ProxyForge.Backend_HostAddress = http://localhost:5062
+
+GET {{ProxyForge.Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
