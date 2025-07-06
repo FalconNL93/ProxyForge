@@ -1,19 +1,24 @@
 using System.Diagnostics;
 using ProxyForge.Backend.Builders;
 using ProxyForge.Backend.Contracts;
+using ProxyForge.Backend.Helpers;
 
 namespace ProxyForge.Backend.Services;
 
 public sealed class Certbot : ICertbot
 {
+    private static readonly string CertbotDataDirectory = Path.Combine(Paths.DataDirectory, "certbot");
+
     public async Task<CertbotResult> RunAsync(CertbotRequest request, CancellationToken cancellationToken = default)
     {
         var builder = new CertbotCommandBuilder()
             .UseCommand(CertbotCommand.CertOnly)
+            .WithCustomDirs(Path.Combine(CertbotDataDirectory, "config"), Path.Combine(CertbotDataDirectory, "work"), Path.Combine(CertbotDataDirectory, "logs"))
             .AddDomains(request.Domains)
             .AddPlugin(request.Plugin)
             .WithEmail(request.Email)
             .UseStaging()
+            .NonInteractive()
             .AgreeTos();
 
         if (request.UseStaging)

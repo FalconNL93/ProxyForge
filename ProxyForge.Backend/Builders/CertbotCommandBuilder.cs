@@ -28,6 +28,12 @@ public sealed class CertbotCommandBuilder
         return this;
     }
 
+    public CertbotCommandBuilder NonInteractive()
+    {
+        _arguments.Add("--non-interactive");
+        return this;
+    }
+
     public CertbotCommandBuilder AddDomains(params string[] domains)
     {
         foreach (var domain in domains)
@@ -71,6 +77,14 @@ public sealed class CertbotCommandBuilder
     public CertbotCommandBuilder UseVenvPath(string path)
     {
         _venvPath = path;
+        return this;
+    }
+
+    public CertbotCommandBuilder WithCustomDirs(string configDir, string workDir, string logsDir)
+    {
+        _arguments.Add($"--config-dir {configDir}");
+        _arguments.Add($"--work-dir {workDir}");
+        _arguments.Add($"--logs-dir {logsDir}");
         return this;
     }
 

@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using ProxyForge.Backend.Contracts;
+using ProxyForge.Backend.Helpers;
 using ProxyForge.Backend.Services;
 using ProxyForge.Backend.Services.HostedServices;
 using Serilog;
@@ -22,6 +23,8 @@ public static class Program
         {
             Log.Information("Starting up");
 
+            Paths.EnsureDataDirectoryExists();
+
             var builder = WebApplication.CreateBuilder(args);
             builder.Host.UseSerilog((context, services, configuration) => configuration
                 .ReadFrom.Configuration(context.Configuration)
@@ -31,7 +34,6 @@ public static class Program
 
             builder.Services.AddHostedService<CertbotRenewalBackgroundService>();
             builder.Services.AddSingleton<ICertbot, Certbot>();
-
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();

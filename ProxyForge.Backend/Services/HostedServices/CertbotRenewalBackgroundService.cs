@@ -1,5 +1,6 @@
 using ProxyForge.Backend.CertbotPlugins;
 using ProxyForge.Backend.Contracts;
+using ProxyForge.Backend.Helpers;
 
 namespace ProxyForge.Backend.Services.HostedServices;
 
@@ -10,7 +11,7 @@ public sealed class CertbotRenewalBackgroundService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("Certbot renewal background service started.");
+        logger.LogInformation("Certbot renewal background service started");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -18,42 +19,49 @@ public sealed class CertbotRenewalBackgroundService(
             {
                 var request = new CertbotRequest
                 {
-                    Domains = ["example.com", "*.example.com"],
-                    Plugin = new DnsCloudflarePlugin("/etc/letsencrypt/cloudflare.ini"),
-                    Email = "admin@example.com",
-                    UseStaging = false,
+                    Domains = ["testapi.falcon-net.nl"],
+                    Plugin = new DnsCloudflarePlugin(Path.Combine(Paths.DataDirectory, "cloudflare.ini")),
+                    Email = "admin@falcon-net.nl",
+                    UseStaging = true,
                     ForceRenewal = false,
                     VenvPath = ".venv"
                 };
 
                 logger.LogInformation("Running Certbot renewal...");
 
-                var result = await certbot.RunAsync(request, stoppingToken);
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
+
+                var result = await certbot.RunAsync(request, linkedCts.Token);
 
                 if (result.Success)
                 {
-                    logger.LogInformation("Certbot renewal succeeded.");
-                    logger.LogDebug(result.StdOut);
+                    logger.LogInformation("Certbot renewal succeeded ({ReturnCode})", result.ExitCode);
+                    logger.LogInformation("StdOut: {StdOut}", result.StdOut);
                 }
                 else
                 {
-                    logger.LogError("Certbot renewal failed.");
-                    logger.LogError(result.StdErr);
+                    logger.LogError("Certbot renewal failed ({ReturnCode})", result.ExitCode);
+                    logger.LogError("StdErr: {StdErr}", result.StdErr);
                 }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                logger.LogInformation("Certbot renewal task was cancelled by host");
+                break;
             }
             catch (OperationCanceledException)
             {
-                logger.LogInformation("Certbot renewal task was cancelled.");
-                break;
+                logger.LogError("Certbot process timed out after 5 minutes");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Unexpected error during Certbot renewal.");
+                logger.LogError(ex, "Unexpected error during Certbot renewal");
             }
 
             await Task.Delay(TimeSpan.FromHours(12), stoppingToken);
         }
 
-        logger.LogInformation("Certbot renewal background service stopping.");
+        logger.LogInformation("Certbot renewal background service stopping");
     }
 }
