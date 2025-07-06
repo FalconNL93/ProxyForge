@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using ProxyForge.Backend.Contracts;
 using ProxyForge.Backend.Helpers;
-using ProxyForge.Backend.Services;
-using ProxyForge.Backend.Services.HostedServices;
+using ProxyForge.Backend.Modules.Certbot;
 using Serilog;
 
 namespace ProxyForge.Backend;

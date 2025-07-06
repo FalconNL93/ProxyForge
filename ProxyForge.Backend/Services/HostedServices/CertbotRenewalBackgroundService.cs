@@ -3,6 +3,8 @@ using ProxyForge.Backend.CertbotPlugins;
 using ProxyForge.Backend.Contracts;
 using ProxyForge.Backend.Helpers;
 
+// This file has been moved to Modules/Certbot/CertbotRenewalBackgroundService.cs. Please update references accordingly.
+
 namespace ProxyForge.Backend.Services.HostedServices;
 
 /// <summary>

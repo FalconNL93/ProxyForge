@@ -1,12 +1,10 @@
-// This file has been moved to Modules/Certbot/Certbot.cs. Please update references accordingly.
-
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using ProxyForge.Backend.Builders;
 using ProxyForge.Backend.Contracts;
 using ProxyForge.Backend.Helpers;
 
-namespace ProxyForge.Backend.Services;
+namespace ProxyForge.Backend.Modules.Certbot;
 
 public sealed partial class Certbot : ICertbot
 {
@@ -139,12 +137,4 @@ public sealed partial class Certbot : ICertbot
 
     [GeneratedRegex(@"failed", RegexOptions.IgnoreCase)]
     private static partial Regex FailedRegex();
-}
-
-public static class CertbotResultExtensions
-{
-    public static Certbot.CertbotRenewalResult GetRenewalResult(this CertbotResult result)
-    {
-        return Certbot.ParseRenewalStdOut(result.StdOut);
-    }
 }

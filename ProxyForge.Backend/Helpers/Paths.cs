@@ -6,8 +6,7 @@ public static class Paths
     public static readonly string ToolsDirectory = Path.Combine(BaseDirectory, "tools");
     public static readonly string DataDirectory = Path.Combine(BaseDirectory, "data");
 
-    public static string CertbotExecutable =>
-        Path.Combine(ToolsDirectory, OperatingSystem.IsWindows() ? "certbot.exe" : "certbot");
+    public static string CertbotExecutable => Path.Combine(ToolsDirectory, OperatingSystem.IsWindows() ? "certbot.exe" : "certbot");
 
     public static void EnsureDataDirectoryExists()
     {
