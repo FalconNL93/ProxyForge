@@ -1,6 +1,9 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using ProxyForge.Backend.Contracts;
+using ProxyForge.Backend.Services;
+using ProxyForge.Backend.Services.HostedServices;
 using Serilog;
 
 namespace ProxyForge.Backend;
@@ -25,6 +28,10 @@ public static class Program
                 .ReadFrom.Services(services)
                 .Enrich.FromLogContext()
                 .WriteTo.Console());
+
+            builder.Services.AddHostedService<CertbotRenewalBackgroundService>();
+            builder.Services.AddSingleton<ICertbot, Certbot>();
+
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();

@@ -1,5 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ProxyForge.Backend.Models;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace ProxyForge.Backend.Controllers;
 
@@ -7,35 +9,65 @@ namespace ProxyForge.Backend.Controllers;
 [Route("api/[controller]")]
 public class TestController(ILogger<TestController> logger) : ControllerBase
 {
-    private static readonly string[] Summaries =
-    [
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    ];
-
     private readonly ILogger<TestController> _logger = logger;
 
-    [HttpGet("GetWeatherForecast")]
-    public IEnumerable<WeatherForecast> Get()
+    [HttpGet("generate")]
+    public string Get()
     {
-        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        var config = new TraefikConfiguration
+        {
+            EntryPoints = new Dictionary<string, EntryPoint>
             {
-                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
-    }
+                ["web"] = new()
+                {
+                    Address = ":80"
+                }
+            },
+            Providers = new Providers
+            {
+                File = new FileProvider
+                {
+                    Directory = "./dynamic"
+                }
+            },
+            Http = new HttpConfiguration
+            {
+                Routers = new Dictionary<string, Router>
+                {
+                    ["my-reverse-proxy"] = new()
+                    {
+                        Rule = "Host(`localhost`)",
+                        Service = "my-backend",
+                        EntryPoints = ["web"]
+                    }
+                },
+                Services = new Dictionary<string, Service>
+                {
+                    ["my-backend"] = new()
+                    {
+                        LoadBalancer = new LoadBalancer
+                        {
+                            Servers =
+                            [
+                                new Server
+                                {
+                                    Url = "http://localhost:8080"
+                                }
+                            ],
+                            PassHostHeader = true
+                        }
+                    }
+                }
+            }
+        };
 
-    [Authorize]
-    [HttpGet("GetPrivateWeatherForecast")]
-    public IEnumerable<WeatherForecast> GetPrivate()
-    {
-        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
+        var serializer = new SerializerBuilder()
+            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .Build();
+
+        var yaml = serializer.Serialize(config);
+        System.IO.File.WriteAllText("/etc/traefik/dynamic/test.yaml", yaml);
+
+        return yaml;
     }
 }
