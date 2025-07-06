@@ -1,13 +1,38 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using ProxyForge.Backend.Builders;
 using ProxyForge.Backend.Contracts;
 using ProxyForge.Backend.Helpers;
 
 namespace ProxyForge.Backend.Services;
 
-public sealed class Certbot : ICertbot
+public sealed partial class Certbot : ICertbot
 {
+    public enum CertbotRenewalResult
+    {
+        Success,
+        NotDueForRenewal,
+        NoCertificatesFound,
+        NoRenewalsAttempted,
+        SomeRenewalsFailed,
+        AllRenewalsFailed,
+        Error,
+        Unknown
+    }
+
     private static readonly string CertbotDataDirectory = Path.Combine(Paths.DataDirectory, "certbot");
+
+    private static readonly List<(Regex Pattern, CertbotRenewalResult Result)> StdOutPatterns = new()
+    {
+        (CertificateNotDueRegex(), CertbotRenewalResult.NotDueForRenewal),
+        (CongratulationsRegex(), CertbotRenewalResult.Success),
+        (NoCertificatesFoundRegex(), CertbotRenewalResult.NoCertificatesFound),
+        (NoRenewalsAttemptedRegex(), CertbotRenewalResult.NoRenewalsAttempted),
+        (AllRenewalsFailedRegex(), CertbotRenewalResult.AllRenewalsFailed),
+        (SomeRenewalsFailedRegex(), CertbotRenewalResult.SomeRenewalsFailed),
+        (ErrorRegex(), CertbotRenewalResult.Error),
+        (FailedRegex(), CertbotRenewalResult.Error)
+    };
 
     public async Task<CertbotResult> RunAsync(CertbotRequest request, CancellationToken cancellationToken = default)
     {
@@ -74,5 +99,50 @@ public sealed class Certbot : ICertbot
             StdOut = string.Join('\n', stdoutBuffer),
             StdErr = string.Join('\n', stderrBuffer)
         };
+    }
+
+    public static CertbotRenewalResult ParseRenewalStdOut(string stdout)
+    {
+        foreach (var (pattern, result) in StdOutPatterns)
+        {
+            if (pattern.IsMatch(stdout))
+            {
+                return result;
+            }
+        }
+
+        return CertbotRenewalResult.Unknown;
+    }
+
+    [GeneratedRegex(@"Certificate not yet due for renewal", RegexOptions.IgnoreCase)]
+    private static partial Regex CertificateNotDueRegex();
+
+    [GeneratedRegex(@"Congratulations! Your certificate and chain have been saved at:", RegexOptions.IgnoreCase)]
+    private static partial Regex CongratulationsRegex();
+
+    [GeneratedRegex(@"No certificates found", RegexOptions.IgnoreCase)]
+    private static partial Regex NoCertificatesFoundRegex();
+
+    [GeneratedRegex(@"No renewals were attempted", RegexOptions.IgnoreCase)]
+    private static partial Regex NoRenewalsAttemptedRegex();
+
+    [GeneratedRegex(@"All renewal attempts failed", RegexOptions.IgnoreCase)]
+    private static partial Regex AllRenewalsFailedRegex();
+
+    [GeneratedRegex(@"The following certs could not be renewed:", RegexOptions.IgnoreCase)]
+    private static partial Regex SomeRenewalsFailedRegex();
+
+    [GeneratedRegex(@"error", RegexOptions.IgnoreCase)]
+    private static partial Regex ErrorRegex();
+
+    [GeneratedRegex(@"failed", RegexOptions.IgnoreCase)]
+    private static partial Regex FailedRegex();
+}
+
+public static class CertbotResultExtensions
+{
+    public static Certbot.CertbotRenewalResult GetRenewalResult(this CertbotResult result)
+    {
+        return Certbot.ParseRenewalStdOut(result.StdOut);
     }
 }
